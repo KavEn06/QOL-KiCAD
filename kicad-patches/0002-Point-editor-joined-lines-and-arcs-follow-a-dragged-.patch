@@ -1,0 +1,107 @@
+From ae2feff607202ca20956a0daff4b2118305cbeec Mon Sep 17 00:00:00 2001
+From: Kavin Nimal <kavinnimal@gmail.com>
+Date: Sat, 21 Nov 2026 22:56:53 +0000
+Subject: [PATCH 2/3] Point editor: joined lines and arcs follow a dragged
+ point
+
+Dragging a point of a line or arc now moves the ends of the shapes joined
+to it on every update, in the same commit, so the outline stays connected
+and the whole drag is one undo step. Also applies to Move Corner/Midpoint
+to Location.
+
+Co-Authored-By: Devin AI <158243242+devin-ai-integration[bot]@users.noreply.github.com>
+---
+ pcbnew/tools/pcb_point_editor.cpp | 16 ++++++++++++++++
+ pcbnew/tools/pcb_point_editor.h   |  4 ++++
+ 2 files changed, 20 insertions(+)
+
+diff --git a/pcbnew/tools/pcb_point_editor.cpp b/pcbnew/tools/pcb_point_editor.cpp
+index 61173358..32991895 100644
+--- a/pcbnew/tools/pcb_point_editor.cpp
++++ b/pcbnew/tools/pcb_point_editor.cpp
+@@ -2369,6 +2369,11 @@ int PCB_POINT_EDITOR::OnSelectionChange( const TOOL_EVENT& aEvent )
+                 getViewControls()->SetAutoPan( true );
+                 inDrag = true;
+ 
++                m_connectedShapes.Clear();
++
++                if( PCB_SHAPE* shape = dynamic_cast<PCB_SHAPE*>( item ) )
++                    m_connectedShapes.AddLeader( shape );
++
+                 if( m_editedPoint->GetGridConstraint() != SNAP_BY_GRID )
+                     grid.SetAuxAxes( true, m_original.GetPosition() );
+ 
+@@ -2760,6 +2765,7 @@ int PCB_POINT_EDITOR::OnSelectionChange( const TOOL_EVENT& aEvent )
+                 shape->UpdateHatching();
+             }
+ 
++            m_connectedShapes.Clear();
+             inDrag = false;
+             frame()->UndoRedoBlock( false );
+             updateSnapLineDirections();
+@@ -2777,6 +2783,7 @@ int PCB_POINT_EDITOR::OnSelectionChange( const TOOL_EVENT& aEvent )
+                 }
+ 
+                 commit.Revert();
++                m_connectedShapes.Clear();
+ 
+                 if( PCB_SHAPE* shape= dynamic_cast<PCB_SHAPE*>( item ) )
+                 {
+@@ -2838,6 +2845,7 @@ int PCB_POINT_EDITOR::OnSelectionChange( const TOOL_EVENT& aEvent )
+         }
+     }
+ 
++    m_connectedShapes.Clear();
+     m_preview.FreeItems();
+     m_radiusHelper = nullptr;
+ 
+@@ -2892,9 +2900,15 @@ int PCB_POINT_EDITOR::movePoint( const TOOL_EVENT& aEvent )
+ 
+     if( dlg.ShowModal() == wxID_OK )
+     {
++        m_connectedShapes.Clear();
++
++        if( PCB_SHAPE* shape = dynamic_cast<PCB_SHAPE*>( m_editPoints->GetParent() ) )
++            m_connectedShapes.AddLeader( shape );
++
+         m_editedPoint->SetPosition( dlg.GetValue() );
+         updateItem( commit );
+         commit.Push( msg );
++        m_connectedShapes.Clear();
+     }
+ 
+     return 0;
+@@ -2966,6 +2980,8 @@ void PCB_POINT_EDITOR::updateItem( BOARD_COMMIT& aCommit )
+         break;
+     }
+ 
++    m_connectedShapes.Update( aCommit, updatedItems );
++
+     // Update the item and any affected items
+     for( EDA_ITEM* updatedItem : updatedItems )
+         getView()->Update( updatedItem );
+diff --git a/pcbnew/tools/pcb_point_editor.h b/pcbnew/tools/pcb_point_editor.h
+index 82b64ccc..fc468389 100644
+--- a/pcbnew/tools/pcb_point_editor.h
++++ b/pcbnew/tools/pcb_point_editor.h
+@@ -27,6 +27,7 @@
+ #ifndef PCB_POINT_EDITOR_H
+ #define PCB_POINT_EDITOR_H
+ 
++#include <tools/connected_shape_follower.h>
+ #include <tool/tool_interactive.h>
+ #include <tools/pcb_selection.h>
+ #include "tool/edit_points.h"
+@@ -167,6 +168,9 @@ private:
+     // just C++ type, because PCB_SHAPE is one type that has many subtypes)
+     std::unique_ptr<POINT_EDIT_BEHAVIOR> m_editorBehavior;
+ 
++    /// Lines and arcs joined to the edited shape, kept attached while a point is dragged.
++    CONNECTED_SHAPE_FOLLOWER             m_connectedShapes;
++
+     static const unsigned int COORDS_PADDING; // Padding from coordinates limits for this tool
+ };
+ 
+-- 
+2.56.0
+
