@@ -13,7 +13,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 from . import PLUGIN_ID, generators, outline, ui
 from .follow import follow
-from .geom import Arc, Line, Shape, bbox
+from .geom import Line, Shape, bbox
 from .kicad_io import EdgeSet, connect
 
 MM = 1e6

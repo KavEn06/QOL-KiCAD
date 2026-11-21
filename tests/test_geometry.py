@@ -3,7 +3,7 @@ import math
 import pytest
 
 from qol_kicad.generators import rounded_rect, slot
-from qol_kicad.geom import Arc, Line, dist, intersections, param_of
+from qol_kicad.geom import Arc, Line, intersections, param_of
 from qol_kicad.outline import add_tab, build_graph, clean, fillet_all, refit_arcs, trim
 
 MM = 1e6
