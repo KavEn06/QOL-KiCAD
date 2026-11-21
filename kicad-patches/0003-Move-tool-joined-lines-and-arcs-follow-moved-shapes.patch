@@ -1,0 +1,91 @@
+From 676b4b16f8f4bff6517da228788abe2ef1f26041 Mon Sep 17 00:00:00 2001
+From: Kavin Nimal <kavinnimal@gmail.com>
+Date: Sat, 21 Nov 2026 22:56:53 +0000
+Subject: [PATCH 3/3] Move tool: joined lines and arcs follow moved shapes
+
+Unselected lines and arcs joined to a moved line or arc keep their joined
+ends attached during the move. Not applied to Move Individually.
+
+Co-Authored-By: Devin AI <158243242+devin-ai-integration[bot]@users.noreply.github.com>
+---
+ pcbnew/tools/edit_tool_move_fct.cpp | 29 +++++++++++++++++++++++++++++
+ 1 file changed, 29 insertions(+)
+
+diff --git a/pcbnew/tools/edit_tool_move_fct.cpp b/pcbnew/tools/edit_tool_move_fct.cpp
+index 4d6d695e..4861ca62 100644
+--- a/pcbnew/tools/edit_tool_move_fct.cpp
++++ b/pcbnew/tools/edit_tool_move_fct.cpp
+@@ -27,6 +27,7 @@
+ #include <functional>
+ #include <algorithm>
+ #include <limits>
++#include <set>
+ #include <kiplatform/ui.h>
+ #include <board.h>
+ #include <board_commit.h>
+@@ -41,6 +42,7 @@
+ #include <pcb_edit_frame.h>
+ #include <spread_footprints.h>
+ #include <tool/tool_manager.h>
++#include <tools/connected_shape_follower.h>
+ #include <tools/pcb_actions.h>
+ #include <tools/pcb_selection_tool.h>
+ #include <tools/edit_tool.h>
+@@ -984,6 +986,19 @@ bool EDIT_TOOL::doMoveSelection( const TOOL_EVENT& aEvent, BOARD_COMMIT* aCommit
+         moved_items.insert( orig_items[itemIdx] );
+     }
+ 
++    // Lines and arcs joined to the moved shapes; their joined ends follow the move.
++    CONNECTED_SHAPE_FOLLOWER connectedShapes;
++
++    auto updateConnectedShapes =
++            [&]()
++            {
++                std::vector<EDA_ITEM*> updatedItems;
++                connectedShapes.Update( *aCommit, updatedItems );
++
++                for( EDA_ITEM* updatedItem : updatedItems )
++                    view()->Update( updatedItem );
++            };
++
+     bool            restore_state = false;
+     VECTOR2I        originalPos = originalCursorPos;  // Initialize to current cursor position
+     VECTOR2D        bboxMovement;
+@@ -1201,6 +1216,8 @@ bool EDIT_TOOL::doMoveSelection( const TOOL_EVENT& aEvent, BOARD_COMMIT* aCommit
+                         redraw3D = true;
+                 }
+ 
++                updateConnectedShapes();
++
+                 if( redraw3D && allowRedraw3D )
+                     editFrame->Update3DView( false, true );
+ 
+@@ -1255,6 +1272,17 @@ bool EDIT_TOOL::doMoveSelection( const TOOL_EVENT& aEvent, BOARD_COMMIT* aCommit
+                     }
+                 }
+ 
++                if( !moveIndividually )
++                {
++                    std::set<EDA_ITEM*> selected( sel_items.begin(), sel_items.end() );
++
++                    for( BOARD_ITEM* item : sel_items )
++                    {
++                        if( item->Type() == PCB_SHAPE_T && !item->IsNew() )
++                            connectedShapes.AddLeader( static_cast<PCB_SHAPE*>( item ), selected );
++                    }
++                }
++
+                 m_cursor = controls->GetCursorPosition();
+ 
+                 if( selection.HasReferencePoint() )
+@@ -1283,6 +1311,7 @@ bool EDIT_TOOL::doMoveSelection( const TOOL_EVENT& aEvent, BOARD_COMMIT* aCommit
+                             view()->Update( boardItem, KIGFX::GEOMETRY );
+                     }
+ 
++                    updateConnectedShapes();
+                     selection.SetReferencePoint( m_cursor );
+                 }
+                 else
+-- 
+2.56.0
+
