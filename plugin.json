@@ -1,0 +1,120 @@
+{
+  "$schema": "https://go.kicad.org/api/schemas/v1",
+  "identifier": "com.github.kaven06.qol-kicad",
+  "name": "QOL-KiCAD",
+  "description": "Quality-of-life tools for KiCad's PCB editor, starting with Fusion 360-style board outline editing.",
+  "runtime": {
+    "type": "python",
+    "min_version": "3.9"
+  },
+  "actions": [
+    {
+      "identifier": "trim",
+      "name": "Trim overhangs",
+      "description": "Cut the selected board edges where other edges cross them and remove the overhanging ends",
+      "show-button": true,
+      "scopes": [
+        "pcb"
+      ],
+      "entrypoint": "actions/trim.py",
+      "icons-light": [
+        "icons/trim_24.png",
+        "icons/trim_48.png"
+      ],
+      "icons-dark": [
+        "icons/trim_dark_24.png",
+        "icons/trim_dark_48.png"
+      ]
+    },
+    {
+      "identifier": "clean",
+      "name": "Close & clean outline",
+      "description": "Join nearly-touching ends, remove duplicates, merge straight runs, and report gaps in the board outline",
+      "show-button": true,
+      "scopes": [
+        "pcb"
+      ],
+      "entrypoint": "actions/clean.py",
+      "icons-light": [
+        "icons/clean_24.png",
+        "icons/clean_48.png"
+      ],
+      "icons-dark": [
+        "icons/clean_dark_24.png",
+        "icons/clean_dark_48.png"
+      ]
+    },
+    {
+      "identifier": "fillet",
+      "name": "Fillet all corners",
+      "description": "Round every corner of the board outline (or of the selection) with one radius",
+      "show-button": true,
+      "scopes": [
+        "pcb"
+      ],
+      "entrypoint": "actions/fillet.py",
+      "icons-light": [
+        "icons/fillet_24.png",
+        "icons/fillet_48.png"
+      ],
+      "icons-dark": [
+        "icons/fillet_dark_24.png",
+        "icons/fillet_dark_48.png"
+      ]
+    },
+    {
+      "identifier": "generate",
+      "name": "Add outline shape",
+      "description": "Add a rounded rectangle, a slot, or a tab/notch on the selected board edge",
+      "show-button": true,
+      "scopes": [
+        "pcb"
+      ],
+      "entrypoint": "actions/generate.py",
+      "icons-light": [
+        "icons/generate_24.png",
+        "icons/generate_48.png"
+      ],
+      "icons-dark": [
+        "icons/generate_dark_24.png",
+        "icons/generate_dark_48.png"
+      ]
+    },
+    {
+      "identifier": "import-dxf",
+      "name": "Import DXF as outline",
+      "description": "Import a DXF onto Edge.Cuts and clean it up: join gaps, remove duplicates, turn segment runs into arcs",
+      "show-button": true,
+      "scopes": [
+        "pcb"
+      ],
+      "entrypoint": "actions/import_dxf.py",
+      "icons-light": [
+        "icons/import_dxf_24.png",
+        "icons/import_dxf_48.png"
+      ],
+      "icons-dark": [
+        "icons/import_dxf_dark_24.png",
+        "icons/import_dxf_dark_48.png"
+      ]
+    },
+    {
+      "identifier": "live-follow",
+      "name": "Live follow (toggle)",
+      "description": "While on, board edges joined to an edge you move follow it when you release the mouse",
+      "show-button": true,
+      "scopes": [
+        "pcb"
+      ],
+      "entrypoint": "actions/live_follow.py",
+      "icons-light": [
+        "icons/live_follow_24.png",
+        "icons/live_follow_48.png"
+      ],
+      "icons-dark": [
+        "icons/live_follow_dark_24.png",
+        "icons/live_follow_dark_48.png"
+      ]
+    }
+  ]
+}
