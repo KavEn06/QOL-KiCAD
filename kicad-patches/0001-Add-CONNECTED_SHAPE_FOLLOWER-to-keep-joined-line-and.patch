@@ -1,0 +1,293 @@
+From 06b242eb914f22a0003f92b34c0ce115f6c354ac Mon Sep 17 00:00:00 2001
+From: Kavin Nimal <kavinnimal@gmail.com>
+Date: Sat, 21 Nov 2026 22:56:53 +0000
+Subject: [PATCH 1/3] Add CONNECTED_SHAPE_FOLLOWER to keep joined line and arc
+ ends attached
+
+Finds the lines and arcs on the same layer whose ends sit on the ends of
+a shape being edited, and moves those ends with it. A following arc keeps
+its included angle.
+
+Co-Authored-By: Devin AI <158243242+devin-ai-integration[bot]@users.noreply.github.com>
+---
+ pcbnew/CMakeLists.txt                     |   1 +
+ pcbnew/tools/connected_shape_follower.cpp | 158 ++++++++++++++++++++++
+ pcbnew/tools/connected_shape_follower.h   |  89 ++++++++++++
+ 3 files changed, 248 insertions(+)
+ create mode 100644 pcbnew/tools/connected_shape_follower.cpp
+ create mode 100644 pcbnew/tools/connected_shape_follower.h
+
+diff --git a/pcbnew/CMakeLists.txt b/pcbnew/CMakeLists.txt
+index 276772bb..cb5b29a6 100644
+--- a/pcbnew/CMakeLists.txt
++++ b/pcbnew/CMakeLists.txt
+@@ -450,6 +450,7 @@ set( PCBNEW_CLASS_SRCS
+     tools/board_editor_control.cpp
+     tools/board_inspection_tool.cpp
+     tools/board_reannotate_tool.cpp
++    tools/connected_shape_follower.cpp
+     tools/convert_tool.cpp
+     tools/drawing_tool.cpp
+     tools/drc_tool.cpp
+diff --git a/pcbnew/tools/connected_shape_follower.cpp b/pcbnew/tools/connected_shape_follower.cpp
+new file mode 100644
+index 00000000..5579baaf
+--- /dev/null
++++ b/pcbnew/tools/connected_shape_follower.cpp
+@@ -0,0 +1,158 @@
++/*
++ * This program source code file is part of KiCad, a free EDA CAD application.
++ *
++ * Copyright The KiCad Developers, see AUTHORS.txt for contributors.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, you may find one here:
++ * http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
++ * or you may search the http://www.gnu.org website for the version 2 license,
++ * or you may write to the Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
++ */
++
++#include "connected_shape_follower.h"
++
++#include <algorithm>
++#include <complex>
++
++#include <board.h>
++#include <commit.h>
++#include <footprint.h>
++#include <geometry/seg.h>
++#include <math/util.h>
++#include <pcb_shape.h>
++
++
++static bool canJoin( const PCB_SHAPE* aShape )
++{
++    return aShape->GetShape() == SHAPE_T::SEGMENT || aShape->GetShape() == SHAPE_T::ARC;
++}
++
++
++static bool joined( const VECTOR2I& aA, const VECTOR2I& aB )
++{
++    return ( aA - aB ).SquaredEuclideanNorm()
++           <= SEG::Square( CONNECTED_SHAPE_FOLLOWER::JOIN_EPSILON );
++}
++
++
++VECTOR2I CONNECTED_SHAPE_FOLLOWER::LINK::Position() const
++{
++    return leaderStart ? leader->GetStart() : leader->GetEnd();
++}
++
++
++void CONNECTED_SHAPE_FOLLOWER::AddLeader( PCB_SHAPE* aLeader, const std::set<EDA_ITEM*>& aExcluded )
++{
++    if( !aLeader || !canJoin( aLeader ) )
++        return;
++
++    const DRAWINGS* siblings = nullptr;
++
++    if( FOOTPRINT* footprint = aLeader->GetParentFootprint() )
++        siblings = &footprint->GraphicalItems();
++    else if( BOARD* board = aLeader->GetBoard() )
++        siblings = &board->Drawings();
++
++    if( !siblings )
++        return;
++
++    for( BOARD_ITEM* sibling : *siblings )
++    {
++        if( sibling == aLeader || sibling->Type() != PCB_SHAPE_T || aExcluded.count( sibling ) )
++            continue;
++
++        PCB_SHAPE* shape = static_cast<PCB_SHAPE*>( sibling );
++
++        if( !canJoin( shape ) || shape->IsLocked() || shape->GetLayer() != aLeader->GetLayer() )
++            continue;
++
++        for( bool leaderStart : { true, false } )
++        {
++            LINK link{ aLeader, leaderStart };
++
++            for( bool followerStart : { true, false } )
++            {
++                if( !joined( followerStart ? shape->GetStart() : shape->GetEnd(), link.Position() ) )
++                    continue;
++
++                auto it = std::find_if( m_followers.begin(), m_followers.end(),
++                                        [&]( const FOLLOWER& f )
++                                        {
++                                            return f.shape == shape;
++                                        } );
++
++                if( it == m_followers.end() )
++                {
++                    FOLLOWER follower;
++                    follower.shape = shape;
++                    follower.start = shape->GetStart();
++                    follower.end = shape->GetEnd();
++
++                    if( shape->GetShape() == SHAPE_T::ARC )
++                        follower.mid = shape->GetArcMid();
++
++                    m_followers.push_back( follower );
++                    it = std::prev( m_followers.end() );
++                }
++
++                LINK& slot = followerStart ? it->startLink : it->endLink;
++
++                if( !slot.leader )
++                    slot = link;
++            }
++        }
++    }
++}
++
++
++void CONNECTED_SHAPE_FOLLOWER::Update( COMMIT& aCommit, std::vector<EDA_ITEM*>& aUpdatedItems )
++{
++    for( const FOLLOWER& follower : m_followers )
++    {
++        PCB_SHAPE* shape = follower.shape;
++        VECTOR2I   start = follower.startLink.leader ? follower.startLink.Position() : follower.start;
++        VECTOR2I   end = follower.endLink.leader ? follower.endLink.Position() : follower.end;
++
++        if( start == shape->GetStart() && end == shape->GetEnd() )
++            continue;
++
++        if( shape->GetShape() == SHAPE_T::ARC )
++        {
++            // Map the original arc onto the new chord, which keeps its included angle.
++            using CPLX = std::complex<double>;
++
++            CPLX oldChord( follower.end.x - follower.start.x, follower.end.y - follower.start.y );
++            CPLX newChord( end.x - start.x, end.y - start.y );
++
++            if( std::abs( oldChord ) < 1.0 || std::abs( newChord ) < 1.0 )
++                continue;
++
++            CPLX mid( follower.mid.x - follower.start.x, follower.mid.y - follower.start.y );
++            mid = mid * newChord / oldChord;
++
++            aCommit.Modify( shape );
++            shape->SetArcGeometry( start, start + VECTOR2I( KiROUND( mid.real() ), KiROUND( mid.imag() ) ),
++                                   end );
++        }
++        else
++        {
++            aCommit.Modify( shape );
++            shape->SetStart( start );
++            shape->SetEnd( end );
++        }
++
++        aUpdatedItems.push_back( shape );
++    }
++}
+diff --git a/pcbnew/tools/connected_shape_follower.h b/pcbnew/tools/connected_shape_follower.h
+new file mode 100644
+index 00000000..b8d8eac6
+--- /dev/null
++++ b/pcbnew/tools/connected_shape_follower.h
+@@ -0,0 +1,89 @@
++/*
++ * This program source code file is part of KiCad, a free EDA CAD application.
++ *
++ * Copyright The KiCad Developers, see AUTHORS.txt for contributors.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, you may find one here:
++ * http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
++ * or you may search the http://www.gnu.org website for the version 2 license,
++ * or you may write to the Free Software Foundation, Inc.,
++ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
++ */
++
++#ifndef CONNECTED_SHAPE_FOLLOWER_H
++#define CONNECTED_SHAPE_FOLLOWER_H
++
++#include <set>
++#include <vector>
++
++#include <math/vector2d.h>
++
++class COMMIT;
++class EDA_ITEM;
++class PCB_SHAPE;
++
++/**
++ * Keeps the ends of lines and arcs attached to the ends of shapes that are being edited.
++ *
++ * The shapes being edited are the leaders. Any other line or arc on the same layer with an end
++ * on a leader's end is a follower, and that end tracks the leader's end while the leader changes.
++ * A following arc keeps its included angle.
++ */
++class CONNECTED_SHAPE_FOLLOWER
++{
++public:
++    /// Ends closer than this are treated as joined.
++    static const int JOIN_EPSILON = 1000;
++
++    /**
++     * Record the shapes joined to the ends of \a aLeader.
++     *
++     * @param aExcluded items that must never follow (e.g. the rest of the selection).
++     */
++    void AddLeader( PCB_SHAPE* aLeader, const std::set<EDA_ITEM*>& aExcluded = {} );
++
++    /**
++     * Move the followers' ends onto the current ends of their leaders.
++     *
++     * @param aUpdatedItems receives each follower that was changed.
++     */
++    void Update( COMMIT& aCommit, std::vector<EDA_ITEM*>& aUpdatedItems );
++
++    void Clear() { m_followers.clear(); }
++
++    bool Empty() const { return m_followers.empty(); }
++
++private:
++    struct LINK
++    {
++        PCB_SHAPE* leader = nullptr;
++        bool       leaderStart = false;
++
++        VECTOR2I Position() const;
++    };
++
++    struct FOLLOWER
++    {
++        PCB_SHAPE* shape = nullptr;
++        VECTOR2I   start; ///< Geometry when the edit began, so repeated updates do not drift.
++        VECTOR2I   mid;
++        VECTOR2I   end;
++        LINK       startLink;
++        LINK       endLink;
++    };
++
++    std::vector<FOLLOWER> m_followers;
++};
++
++#endif // CONNECTED_SHAPE_FOLLOWER_H
+-- 
+2.56.0
+
