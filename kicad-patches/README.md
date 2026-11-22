@@ -35,7 +35,9 @@ Scripts are in `windows/`:
 - `package.sh`: installs into a portable tree (`$WORK/dist/KiCad-10.0.8-qol-win64`), adds the stock
   symbol/footprint/template libraries, a trimmed Python 3.14 + wxPython, ngspice, and every MinGW
   DLL found by `ntldd`, then zips it. The 3D model library (multi-GB) is **not** included: the 3D
-  viewer shows no component models; everything else works.
+  viewer shows no component models.
+  IPC-API (new-style) Python plugins cannot create their environment with this MSYS2 Python
+  (its venvs use `bin\` but KiCad looks for `Scripts\pythonw.exe`); legacy SWIG plugins work.
 - `kicad-qol.nsi`: optional NSIS installer around that tree (Start Menu shortcuts + uninstaller).
 
 ```sh
