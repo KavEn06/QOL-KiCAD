@@ -1,0 +1,52 @@
+diff --git a/kicad-mac-builder/CMakeLists.txt b/kicad-mac-builder/CMakeLists.txt
+index 9b4688a..02b92d8 100644
+--- a/kicad-mac-builder/CMakeLists.txt
++++ b/kicad-mac-builder/CMakeLists.txt
+@@ -111,6 +111,12 @@ DECLARE_KMB_CMAKE_ARG("PYTHON_LIBRARY" ${PYTHON_INSTALL_DIR}/Python.framework/Ve
+ DECLARE_KMB_CMAKE_ARG("PYTHON_SITE_PACKAGE_PATH" ${PYTHON_INSTALL_DIR}/Python.framework/Versions/Current/lib/python${PYTHON_X_Y_VERSION}/site-packages)
+ DECLARE_KMB_CMAKE_ARG("PYTHON_FRAMEWORK" ${PYTHON_INSTALL_DIR}/Python.framework )
+ 
++# KiCad 10.0 needs nng 1.x; Homebrew now ships nng 2.x.
++if(DEFINED ENV{KMB_NNG_PREFIX})
++    DECLARE_KMB_CMAKE_ARG("NNG_INCLUDE_DIR" $ENV{KMB_NNG_PREFIX}/include )
++    DECLARE_KMB_CMAKE_ARG("NNG_LIBRARY" $ENV{KMB_NNG_PREFIX}/lib/libnng.a )
++endif()
++
+ DECLARE_KMB_CMAKE_ARG("NGSPICE_INCLUDE_DIR" ${ngspice_INSTALL_DIR}/include )
+ DECLARE_KMB_CMAKE_ARG("NGSPICE_LIBRARY" ${ngspice_INSTALL_DIR}/lib/libngspice.dylib )
+ 
+diff --git a/kicad-mac-builder/ngspice.cmake b/kicad-mac-builder/ngspice.cmake
+index b412e16..cd758fe 100644
+--- a/kicad-mac-builder/ngspice.cmake
++++ b/kicad-mac-builder/ngspice.cmake
+@@ -10,7 +10,9 @@ ExternalProject_Add(
+     CONFIGURE_COMMAND ./autogen.sh
+     COMMAND ./configure --prefix=${ngspice_INSTALL_DIR} --with-ngshared
+         --enable-xspice --enable-cider --disable-debug --disable-openmp
+-        LDFLAGS=-L/usr/local/opt/bison/lib
++        "CFLAGS=-mmacosx-version-min=${MACOS_MIN_VERSION}"
++        "LDFLAGS=-L/usr/local/opt/bison/lib -mmacosx-version-min=${MACOS_MIN_VERSION}"
++        "CXXFLAGS=-Wno-invalid-specialization -mmacosx-version-min=${MACOS_MIN_VERSION}"
+     BUILD_COMMAND  ${BIN_DIR}/run-with-path.sh ${CMAKE_MAKE_PROGRAM} /usr/local/opt/bison/bin:$ENV{PATH}
+     BUILD_IN_SOURCE 1
+     INSTALL_COMMAND make install
+diff --git a/kicad-mac-builder/packages3d.cmake b/kicad-mac-builder/packages3d.cmake
+index d48f3e3..07f5cdf 100644
+--- a/kicad-mac-builder/packages3d.cmake
++++ b/kicad-mac-builder/packages3d.cmake
+@@ -1,10 +1,11 @@
++# Local change: skip the multi-GB 3D model library; KiCad.app runs without it.
+ ExternalProject_Add(
+     packages3d
+     PREFIX  packages3d
+-    GIT_REPOSITORY ${PACKAGES3D_URL}
+-    GIT_TAG ${PACKAGES3D_TAG}
+-    #GIT_PROGRESS 1 #TODO uncomment when the official KiCad CMake gets updated...
+-    CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=<BINARY_DIR>/output"
++    DOWNLOAD_COMMAND ""
++    CONFIGURE_COMMAND ""
++    BUILD_COMMAND ""
++    INSTALL_COMMAND ${CMAKE_COMMAND} -E make_directory <BINARY_DIR>/output
+ )
+ 
+ ExternalProject_Get_Property(packages3d BINARY_DIR)
