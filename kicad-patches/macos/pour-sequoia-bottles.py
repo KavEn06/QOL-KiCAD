@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Replace installed Homebrew kegs with their arm64_sequoia bottles (macOS 15 minimum)."""
-import json, os, shutil, subprocess, sys, tarfile, tempfile, urllib.request
+import hashlib, json, os, shutil, subprocess, sys, tarfile, tempfile, urllib.request
 
 PREFIX = "/opt/homebrew"
 CELLAR = f"{PREFIX}/Cellar"
@@ -48,6 +48,9 @@ def pour(name):
         tgz = os.path.join(tmp, "b.tar.gz")
         with urllib.request.urlopen(req) as r, open(tgz, "wb") as f:
             shutil.copyfileobj(r, f)
+        with open(tgz, "rb") as f:
+            if hashlib.sha256(f.read()).hexdigest() != bottle["sha256"]:
+                sys.exit(f"{name}: bottle SHA-256 mismatch")
         with tarfile.open(tgz) as t:
             t.extractall(tmp)
         (version,) = os.listdir(os.path.join(tmp, name))
