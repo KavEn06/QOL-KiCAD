@@ -8,7 +8,7 @@ PY=/ucrt64/bin/python.exe
 MSYS2_ARG_CONV_EXCL="-DCMAKE_INSTALL_PREFIX=;-DCMAKE_PREFIX_PATH=;-DDEFAULT_INSTALL_PATH=" \
 /ucrt64/bin/cmake.exe -Wno-dev -Wno-author -GNinja \
   -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_INSTALL_PREFIX=$WORK/install \
+  -DCMAKE_INSTALL_PREFIX=$(cygpath -m $WORK/install) \
   -DCMAKE_PREFIX_PATH=/ucrt64 \
   -DDEFAULT_INSTALL_PATH=/ucrt64 \
   -DwxWidgets_CONFIG_EXECUTABLE=/ucrt64/bin/wx-config-3.2 \

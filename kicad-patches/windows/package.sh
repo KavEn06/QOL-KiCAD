@@ -5,7 +5,7 @@ cd $WORK
 NAME=KiCad-10.0.8-qol-win64
 OUT=$WORK/dist/$NAME
 rm -rf $WORK/install "$OUT"; mkdir -p "$OUT"
-MSYS2_ARG_CONV_EXCL="*" /ucrt64/bin/cmake.exe --install build --prefix $(cygpath -m $WORK/install) > $WORK/install.log
+/ucrt64/bin/cmake.exe --install build > $WORK/install.log
 cp -a $WORK/install/. "$OUT/"
 
 # Stock libraries (no 3D models)
@@ -29,11 +29,11 @@ mkdir -p "$OUT/etc" && cp -a /ucrt64/etc/fonts /ucrt64/etc/ssl "$OUT/etc/"
 # Copy every MinGW DLL the binaries/modules depend on (until no new ones appear)
 while :; do
   find "$OUT" \( -iname '*.exe' -o -iname '*.dll' -o -iname '*.kiface' -o -iname '*.pyd' -o -iname '*.cm' \) -print0 \
-    | xargs -0 ntldd -R 2>/dev/null | grep -io '[a-z]:\msys64\ucrt64\bin\[^ ]*\.dll' | sort -fu > /tmp/deps.txt
+    | xargs -0 ntldd -R 2>/dev/null | tr -d '\r' \
+    | awk 'tolower($3) ~ /msys64.ucrt64.bin/ {print $1}' | sort -fu > /tmp/deps.txt
   added=0
-  while read -r d; do
-    f=$(cygpath -u "$d"); b=$(basename "$f")
-    [ -e "$OUT/bin/$b" ] || { cp "$f" "$OUT/bin/"; added=1; }
+  while read -r b; do
+    [ -e "$OUT/bin/$b" ] || { cp "/ucrt64/bin/$b" "$OUT/bin/"; added=1; }
   done < /tmp/deps.txt
   [ $added = 0 ] && break
 done
