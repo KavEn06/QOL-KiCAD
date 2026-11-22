@@ -28,6 +28,7 @@ Function .onInit
 FunctionEnd
 
 Section "Install"
+  SetShellVarContext all
   SetOutPath "$INSTDIR"
   File /r "${SRC}\*.*"
   WriteUninstaller "$INSTDIR\uninstall.exe"
@@ -46,6 +47,7 @@ Section "Install"
 SectionEnd
 
 Section "Uninstall"
+  SetShellVarContext all
   SetRegView 64
   RMDir /r "$SMPROGRAMS\${APPNAME}"
   RMDir /r "$INSTDIR"
