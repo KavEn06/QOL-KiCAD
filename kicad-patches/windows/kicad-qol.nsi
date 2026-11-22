@@ -50,6 +50,11 @@ Section "Uninstall"
   SetShellVarContext all
   SetRegView 64
   RMDir /r "$SMPROGRAMS\${APPNAME}"
-  RMDir /r "$INSTDIR"
+  RMDir /r "$INSTDIRbin"
+  RMDir /r "$INSTDIRetc"
+  RMDir /r "$INSTDIRib"
+  RMDir /r "$INSTDIRshare"
+  Delete "$INSTDIRNinstall.exe"
+  RMDir "$INSTDIR"
   DeleteRegKey HKLM "${REGKEY}"
 SectionEnd
