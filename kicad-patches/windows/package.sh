@@ -16,7 +16,7 @@ cp -a /ucrt64/share/kicad/footprints /ucrt64/share/kicad/symbols /ucrt64/share/k
 PYV=python3.14
 mkdir -p "$OUT/lib/$PYV/site-packages"
 (cd /ucrt64/lib/$PYV && tar cf - --exclude=./site-packages --exclude=./test --exclude=./idlelib \
-   --exclude=./tkinter --exclude=./turtledemo --exclude=./ensurepip --exclude='__pycache__' .) \
+   --exclude=./tkinter --exclude=./turtledemo --exclude='__pycache__' .) \
    | (cd "$OUT/lib/$PYV" && tar xf -)
 for p in wx six.py packaging; do cp -a /ucrt64/lib/$PYV/site-packages/$p "$OUT/lib/$PYV/site-packages/"; done
 cp /ucrt64/bin/python.exe /ucrt64/bin/python3.exe /ucrt64/bin/pythonw.exe "$OUT/bin/"
