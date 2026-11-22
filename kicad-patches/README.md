@@ -5,7 +5,7 @@ While you drag a point of a line or arc, or move shapes with the Move tool, othe
 on the same layer joined to them keep their ends attached live, in one undo step. Following arcs
 keep their included angle (not their tangency). Locked shapes and other layers never follow.
 
-Tested on Linux (Ubuntu 22.04) and macOS 26 (Apple Silicon).
+Tested on Linux (Ubuntu 22.04) and on macOS 26 (Apple Silicon); the macOS build targets macOS 15 and later.
 
 ## Build (Linux)
 
