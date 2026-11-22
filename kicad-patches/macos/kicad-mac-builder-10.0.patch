@@ -16,14 +16,17 @@ index 9b4688a..02b92d8 100644
  DECLARE_KMB_CMAKE_ARG("NGSPICE_LIBRARY" ${ngspice_INSTALL_DIR}/lib/libngspice.dylib )
  
 diff --git a/kicad-mac-builder/ngspice.cmake b/kicad-mac-builder/ngspice.cmake
-index b412e16..1df161d 100644
+index b412e16..cd758fe 100644
 --- a/kicad-mac-builder/ngspice.cmake
 +++ b/kicad-mac-builder/ngspice.cmake
-@@ -11,6 +11,7 @@ ExternalProject_Add(
+@@ -10,7 +10,9 @@ ExternalProject_Add(
+     CONFIGURE_COMMAND ./autogen.sh
      COMMAND ./configure --prefix=${ngspice_INSTALL_DIR} --with-ngshared
          --enable-xspice --enable-cider --disable-debug --disable-openmp
-         LDFLAGS=-L/usr/local/opt/bison/lib
-+        CXXFLAGS=-Wno-invalid-specialization
+-        LDFLAGS=-L/usr/local/opt/bison/lib
++        "CFLAGS=-mmacosx-version-min=${MACOS_MIN_VERSION}"
++        "LDFLAGS=-L/usr/local/opt/bison/lib -mmacosx-version-min=${MACOS_MIN_VERSION}"
++        "CXXFLAGS=-Wno-invalid-specialization -mmacosx-version-min=${MACOS_MIN_VERSION}"
      BUILD_COMMAND  ${BIN_DIR}/run-with-path.sh ${CMAKE_MAKE_PROGRAM} /usr/local/opt/bison/bin:$ENV{PATH}
      BUILD_IN_SOURCE 1
      INSTALL_COMMAND make install

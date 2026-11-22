@@ -35,7 +35,7 @@ on macOS 15 itself, skip that step.
 `macos/kicad-mac-builder-10.0.patch` fixes the builder for current Homebrew/Xcode:
 
 - nng: KiCad 10.0 needs nng 1.x but Homebrew ships 2.x, so a local nng 1.x is used via `KMB_NNG_PREFIX`.
-- ngspice: adds `-Wno-invalid-specialization` (newer Clang rejects ngspice's `is_compound` specialisation).
+- ngspice: adds `-Wno-invalid-specialization` (newer Clang rejects ngspice's `is_compound` specialisation) and passes `-mmacosx-version-min` (otherwise it targets the build Mac's macOS).
 - packages3D: skips the multi-GB 3D model library (3D viewer shows no models; everything else works).
 
 ```sh
