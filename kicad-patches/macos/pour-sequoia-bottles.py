@@ -18,6 +18,7 @@ def is_macho(path):
         return f.read(4) in (b"\xcf\xfa\xed\xfe", b"\xca\xfe\xba\xbe")
 
 def fix_macho(path):
+    os.chmod(path, os.stat(path).st_mode | 0o200)
     out = subprocess.run(["otool", "-l", path], capture_output=True, text=True).stdout.splitlines()
     args, cmd = [], None
     for i, line in enumerate(out):
@@ -34,7 +35,7 @@ def fix_macho(path):
                 args += ["-change", val, sub(val)]
     if args:
         subprocess.run(["install_name_tool", *args, path], check=True, capture_output=True)
-    subprocess.run(["codesign", "-f", "-s", "-", path], capture_output=True)
+    subprocess.run(["codesign", "-f", "-s", "-", path], check=True, capture_output=True)
 
 def pour(name):
     info = json.load(urllib.request.urlopen(f"https://formulae.brew.sh/api/formula/{name}.json"))
