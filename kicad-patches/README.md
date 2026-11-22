@@ -24,8 +24,13 @@ KICAD_RUN_FROM_BUILD_DIR=1 ./pcbnew/pcbnew
 
 Built with [kicad-mac-builder](https://gitlab.com/kicad/packaging/kicad-mac-builder) (`10.0` branch,
 commit `0977c0f`) on macOS 26.6 / Xcode 26.6. The result is a full `KiCad.app` (KiCad, PCB Editor,
-Schematic Editor, ...) for **arm64**, minimum **macOS 26.0**: it links Homebrew's prebuilt libraries,
-which target the macOS version they were built on. The build takes a few hours and needs ~40 GB free.
+Schematic Editor, ...) for **arm64**, minimum **macOS 15.0** (Sequoia). The build takes a few hours and
+needs ~40 GB free.
+
+The app bundles Homebrew's libraries, and Homebrew installs the build for the Mac it runs on. To make
+the app run on macOS 15 when building on macOS 26, `macos/pour-sequoia-bottles.py` swaps those kegs for
+Homebrew's published `arm64_sequoia` bottles (installed and bottle versions must match). If you build
+on macOS 15 itself, skip that step.
 
 `macos/kicad-mac-builder-10.0.patch` fixes the builder for current Homebrew/Xcode:
 
@@ -42,12 +47,16 @@ cd ~/kicad-mac-builder
 git apply /path/to/QOL-KiCAD/kicad-patches/macos/kicad-mac-builder-10.0.patch
 ci/arm64-on-arm64/bootstrap-arm64-on-arm64.sh                # Homebrew deps
 mkdir -p ~/kmb-tools && (cd ~/kmb-tools && ~/kicad-mac-builder/ci/src/get-wrangle-bundle.sh)
+/path/to/QOL-KiCAD/kicad-patches/macos/pour-sequoia-bottles.py abseil boost brotli cairo fontconfig \
+  freetype gettext glib graphite2 harfbuzz icu4c@79 libgit2 libpng libssh2 libtool libx11 libxau libxcb \
+  libxdmcp libxext libxrender llhttp opencascade openssl@3 openssl@4 pcre2 pixman protobuf tbb unixodbc \
+  zstd glew libomp
 
 # 2. nng 1.x
 git clone -b v1.11 https://github.com/nanomsg/nng.git ~/nng-src
 cmake -S ~/nng-src -B ~/nng-src/build -G Ninja -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX=$HOME/kmb-deps/nng -DBUILD_SHARED_LIBS=OFF \
-  -DNNG_ENABLE_TLS=OFF -DNNG_TESTS=OFF -DNNG_TOOLS=OFF -DCMAKE_OSX_DEPLOYMENT_TARGET=26.0
+  -DNNG_ENABLE_TLS=OFF -DNNG_TESTS=OFF -DNNG_TOOLS=OFF -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0
 cmake --build ~/nng-src/build --target install
 
 # 3. Patched KiCad source
@@ -59,13 +68,13 @@ cd ~/kicad-mac-builder
 KMB_NNG_PREFIX=$HOME/kmb-deps/nng WX_SKIP_DOXYGEN_VERSION_CHECK=1 \
 PATH=$HOME/kmb-tools/virtualenv/bin:/opt/homebrew/bin:$PATH \
 python3 ./build.py --arch=arm64 --build-dir ~/kmb-build --kicad-source-dir ~/kicad \
-  --build-type Release --macos-min-version 26.0 \
+  --build-type Release --macos-min-version 15.0 \
   --symbols-ref 10.0.8 --footprints-ref 10.0.8 --templates-ref 10.0.8 --packages3d-ref 10.0.8 \
   --skip-docs-update --target kicad
 ditto -c -k --sequesterRsrc --keepParent ~/kmb-build/kicad-dest/KiCad.app ~/KiCad.zip
 ```
 
-The `package-kicad-nightly` DMG target failed on macOS 26 (`hdiutil: resize: failed`), so zip the
+The `package-kicad-nightly` DMG target fails on macOS 26 (`hdiutil: resize: failed`), so zip the
 app with `ditto` instead (keeps the bundle's symlinks and signatures).
 
 ### Opening the app
