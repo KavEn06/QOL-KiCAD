@@ -156,3 +156,9 @@ def test_tangent_arc_leaves_a_line_smoothly():
     assert isinstance(arc, Arc) and near(arc.c, (10 * MM, 5 * MM))
     assert near(arc.start, (10 * MM, 0)) and near(arc.end, (15 * MM, 5 * MM))
     assert abs(abs(arc.sweep) - math.pi / 2) < 1e-6
+
+
+def test_set_radius_keeps_the_board_item_of_the_shape():
+    sk = Sketch([Arc.circle((0.0, 0.0), 5 * MM, "c1"), Arc.from_3pt((0.0, 0.0), (5 * MM, 5 * MM), (10 * MM, 0.0), "a1")])
+    assert sk.set_radius(0, 7 * MM) and sk.set_radius(1, 8 * MM)
+    assert [s.ref for s in sk.shapes] == ["c1", "a1"]

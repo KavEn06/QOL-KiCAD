@@ -458,14 +458,14 @@ class Sketch:
         if not isinstance(s, Arc) or radius <= TOL:
             return False
         if s.closed:
-            self.shapes[i] = Arc.circle(s.c, radius)
+            self.shapes[i] = Arc.circle(s.c, radius, s.ref)
             return True
         chord = dist(s.start, s.end)
         if radius < chord / 2:
             return False
         half = math.asin(min(1.0, chord / (2 * radius)))
         sweep = 2 * half if abs(s.sweep) <= math.pi else TAU - 2 * half
-        bent = Arc(s.c, s.r, s.a0, math.copysign(sweep, s.sweep)).with_ends(s.start, s.end)
+        bent = Arc(s.c, s.r, s.a0, math.copysign(sweep, s.sweep), s.ref).with_ends(s.start, s.end)
         self.shapes[i] = bent
         return True
 
