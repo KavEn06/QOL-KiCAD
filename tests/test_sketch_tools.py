@@ -173,3 +173,19 @@ def test_escape_cancels_then_returns_to_select():
     assert c.points == [] and c.tool == "line"
     c.escape()
     assert c.tool == "select"
+
+
+def test_escape_during_a_box_selection_keeps_the_last_edit():
+    sk = Sketch()
+    c = Controller(sk)
+    c.set_tool("circle")
+    c.press((0.0, 0.0))
+    c.release((0.0, 0.0))
+    c.press((5 * MM, 0.0))
+    c.release((5 * MM, 0.0))
+    assert len(sk.shapes) == 1
+    c.set_tool("select")
+    c.press((20 * MM, 20 * MM))
+    c.move((30 * MM, 30 * MM))
+    c.escape()
+    assert len(sk.shapes) == 1

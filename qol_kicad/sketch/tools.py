@@ -76,7 +76,7 @@ class Controller:
         self.message = ""
 
     def cancel(self) -> None:
-        if self._drag:
+        if self._drag and self._drag[0] != "box":  # a box drag takes no checkpoint
             self.sketch.discard_checkpoint()
         self._drag = None
         self.points, self.preview, self.box, self.placing = [], [], None, []
