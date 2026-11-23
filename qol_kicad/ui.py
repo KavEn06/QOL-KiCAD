@@ -79,3 +79,26 @@ def ask(title: str, fields: Sequence[Field], saved: Optional[Dict[str, Any]] = N
         return None
     finally:
         dlg.Destroy()
+
+
+def bring_to_front() -> None:
+    """Make this plugin's window the active one. On macOS a plugin starts behind KiCad."""
+    import sys
+
+    if sys.platform != "darwin":
+        return
+    try:
+        import ctypes
+        import ctypes.util
+
+        objc = ctypes.cdll.LoadLibrary(ctypes.util.find_library("objc"))
+        objc.objc_getClass.restype = ctypes.c_void_p
+        objc.sel_registerName.restype = ctypes.c_void_p
+        send = objc.objc_msgSend
+        send.restype = ctypes.c_void_p
+        send.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        app = send(objc.objc_getClass(b"NSApplication"), objc.sel_registerName(b"sharedApplication"))
+        send.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_bool]
+        send(app, objc.sel_registerName(b"activateIgnoringOtherApps:"), True)
+    except Exception:
+        pass

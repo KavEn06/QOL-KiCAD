@@ -61,3 +61,18 @@ def _rot90(s: Shape, c: Point) -> Shape:
     if isinstance(s, Line):
         return Line(rot(s.a), rot(s.b))
     return Arc(rot(s.c), s.r, s.a0 + math.pi / 2, s.sweep)
+
+
+def polygon(center: Point, sides: int, diameter: float) -> List[Shape]:
+    """Regular polygon with its corners on a circle of ``diameter``, one flat side at the bottom."""
+    if sides < 3:
+        raise ValueError("A polygon needs at least 3 sides.")
+    if diameter <= 0:
+        raise ValueError("The diameter must be positive.")
+    r = diameter / 2
+    start = math.pi / 2 - math.pi / sides
+    pts = [
+        (center[0] + r * math.cos(start + 2 * math.pi * i / sides), center[1] + r * math.sin(start + 2 * math.pi * i / sides))
+        for i in range(sides)
+    ]
+    return [Line(a, b) for a, b in zip(pts, pts[1:] + pts[:1])]
