@@ -285,10 +285,6 @@ class SketchTarget:
                     board.update_items(list(group.items) + [group])
             except Exception:
                 board.drop_commit(commit)
-                if self.group is None and created:  # no groups (KiCad 9): leave no loose copy behind
-                    commit = board.begin_commit()
-                    board.remove_items(created)
-                    board.push_commit(commit, message + " (undone)")
                 raise
             board.push_commit(commit, message + " (group)")
             steps = 2
