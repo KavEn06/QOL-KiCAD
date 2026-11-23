@@ -22,7 +22,7 @@ Live follow reacts after the move, not during the drag: KiCad's plugin API has n
 
 ## Sketch
 
-Sketch opens a separate drawing window. The board outline is shown as a dashed grey reference that you can snap to. **Insert as group** puts the sketch on the board as a group named `QOL sketch: <name>`, on the layer chosen in the window (Edge.Cuts by default).
+Sketch needs KiCad 10 or newer. It opens a separate drawing window. The board outline is shown as a dashed grey reference that you can snap to. **Insert as group** puts the sketch on the board as a group named `QOL sketch: <name>`, on the layer chosen in the window (Edge.Cuts by default).
 
 To edit a group later, select it in the PCB editor and press Sketch. Its lines, arcs and circles open at their board position, and **Update group** replaces them in place. Any group of lines, arcs and circles can be opened this way, also one made by hand. Other members of the group (text, footprints, tracks) are left alone.
 

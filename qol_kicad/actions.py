@@ -253,6 +253,8 @@ def sketch(kicad, board, params: Params = None) -> str:
     from .kicad_io import SketchTarget, drawing_layers, layer_name
     from .sketch.window import SketchFrame
 
+    if kicad.get_version().major < 10:  # KiCad 9's API has no groups; shapes would be left ungrouped
+        raise UserError("Sketch needs KiCad 10 or newer.")
     wx = ui._wx()
     target = SketchTarget.from_selection(board)
     layers = drawing_layers(board)
