@@ -47,6 +47,14 @@ def live_follow(d, fg, hi):
     d.line([(72, 14), (56, 30)], fill=hi, width=5)
 
 
+def sketch(d, fg, hi):
+    d.line([(12, 84), (12, 40), (40, 40)], fill=fg, width=7, joint="curve")
+    d.arc([(12, 12), (68, 68)], 0, 90, fill=fg, width=7)
+    d.line([(12, 84), (40, 84)], fill=fg, width=7)
+    d.line([(52, 78), (82, 30)], fill=hi, width=9)
+    d.polygon([(44, 90), (48, 72), (60, 80)], fill=hi)
+
+
 for name, draw in list(globals().items()):
     if not callable(draw) or name in ("Image", "ImageDraw"):
         continue

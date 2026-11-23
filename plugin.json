@@ -9,6 +9,24 @@
   },
   "actions": [
     {
+      "identifier": "sketch",
+      "name": "Sketch",
+      "description": "Open a sketch window to draw or import board edges and insert them as a group; select a group first to edit it",
+      "show-button": true,
+      "scopes": [
+        "pcb"
+      ],
+      "entrypoint": "actions/sketch.py",
+      "icons-light": [
+        "icons/sketch_24.png",
+        "icons/sketch_48.png"
+      ],
+      "icons-dark": [
+        "icons/sketch_dark_24.png",
+        "icons/sketch_dark_48.png"
+      ]
+    },
+    {
       "identifier": "trim",
       "name": "Trim overhangs",
       "description": "Cut the selected board edges where other edges cross them and remove the overhanging ends",

@@ -211,6 +211,78 @@ def import_dxf(kicad, board, params: Params = None) -> str:
     return msg
 
 
+def _load_dxf(kicad):
+    """Ask for a DXF file and its options. Returns (shapes, message), or None if cancelled."""
+    from .dxf import read_dxf
+
+    path = ui.pick_file("Import DXF into the sketch", "DXF files (*.dxf)|*.dxf;*.DXF")
+    if not path:
+        return None
+    params = _ask(
+        kicad,
+        "sketch_dxf",
+        "Import DXF",
+        [
+            ("tolerance", "Join gaps up to (mm)", 0.01),
+            ("fit", "Turn segment runs into arcs within (mm)", 0.005),
+            ("unit", "If the file has no units, 1 unit = (mm)", 1.0),
+        ],
+    )
+    if params is None:
+        return None
+    try:
+        raw, skipped = read_dxf(path, params["unit"])
+    except Exception as e:  # ezdxf raises several error types for bad files
+        ui.error(f"Could not read the DXF file:\n{e}")
+        return None
+    if not raw:
+        ui.error("The DXF has no lines, arcs, circles, polylines, splines or ellipses in model space.")
+        return None
+    tol = params["tolerance"] * MM
+    shapes, _ = outline.clean(raw, tol)
+    shapes, _ = outline.refit_arcs(shapes, params["fit"] * MM, tol)
+    shapes, _ = outline.clean(shapes, tol)
+    message = f"Imported {_plural(len(shapes), 'shape')}. Click to place."
+    if skipped:
+        message += f" Skipped {_plural(skipped, 'unsupported entity')}."
+    return shapes, message
+
+
+def sketch(kicad, board, params: Params = None) -> str:
+    """Open the sketch window on the selected group, or on a new sketch."""
+    from .kicad_io import SketchTarget, drawing_layers, layer_name
+    from .sketch.window import SketchFrame
+
+    wx = ui._wx()
+    target = SketchTarget.from_selection(board)
+    layers = drawing_layers(board)
+    if target.layer not in layers:
+        layers.append(target.layer)
+
+    def finish(shapes, layer_index, name) -> str:
+        steps = target.write(shapes, layers[layer_index], name)
+        if steps == 2:
+            return "The sketch is on the board as a group.\nKiCad needed two undo steps for it: undo twice to take it back."
+        return ""
+
+    frame = SketchFrame(
+        shapes=target.shapes,
+        reference=target.reference(),
+        layers=[layer_name(v) for v in layers],
+        layer_index=layers.index(target.layer),
+        name=target.name,
+        editing=target.group is not None,
+        on_finish=finish,
+        ask=lambda key, title, fields: _ask(kicad, key, title, fields),
+        read_dxf=lambda: _load_dxf(kicad),
+    )
+    frame.Show()
+    frame.Raise()
+    wx.CallAfter(ui.bring_to_front)
+    wx.GetApp().MainLoop()
+    return ""
+
+
 def _ends(edges: EdgeSet):
     # rectangles expand to four shapes with one ref; live follow leaves them alone
     count = Counter(s.ref for s in edges.shapes)
@@ -291,6 +363,7 @@ ACTIONS: Dict[str, Callable] = {
     "generate": generate,
     "import_dxf": import_dxf,
     "live_follow": live_follow,
+    "sketch": sketch,
 }
 
 
