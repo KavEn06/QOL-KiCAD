@@ -224,14 +224,18 @@ class SketchTarget:
         members: List[BoardShape] = []
         updates: List[BoardShape] = []
         spare: List[BoardShape] = []
+        relayer = layer != self.layer  # only move shapes when the layer was changed in the window
         for ref, item in self.items.items():
             outs = by_ref.get(ref, [])
+            if outs == before[ref] and not relayer:
+                members.append(item)  # untouched, also a rectangle read as four lines
+                continue
             if outs and _matches(item, outs[0]):
                 members.append(item)
-                if outs != before[ref] or int(item.layer) != layer:
-                    _set_geometry(item, outs[0])
+                _set_geometry(item, outs[0])
+                if relayer:
                     item.layer = layer
-                    updates.append(item)
+                updates.append(item)
                 outs = outs[1:]
             else:
                 spare.append(item)
