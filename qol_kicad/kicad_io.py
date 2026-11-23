@@ -211,8 +211,8 @@ class SketchTarget:
 
         Board items are reused where possible, so editing a group that does
         not gain shapes is one undo step. KiCad only accepts group members
-        that are already on the board, so new shapes are one step and adding
-        them to the group is a second one.
+        that are already on the board (also within one commit), so new shapes
+        are one step and adding them to the group is a second one.
         """
         by_ref: Dict[str, List[Shape]] = defaultdict(list)
         loose: List[Shape] = []
@@ -276,7 +276,9 @@ class SketchTarget:
                 if self.group is None:
                     result = board.create_items([group])[0]
                 else:
-                    board.update_items([group])
+                    # Every member goes in the step with the group: KiCad's undo
+                    # drops members from the group that the step did not record.
+                    board.update_items(list(group.items) + [group])
             except Exception:
                 board.drop_commit(commit)
                 raise
